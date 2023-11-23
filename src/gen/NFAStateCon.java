@@ -8,7 +8,7 @@ public class NFAStateCon implements NFAState{
     private boolean finale;
     private  boolean iniziale;
 
-    private  ArrayList<NFATransition> transitionsM;
+    private final ArrayList<NFATransition> transitionsM;
 
     public NFAStateCon(String name, boolean finale, boolean iniziale) {
         this.name = name;
