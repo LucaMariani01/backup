@@ -1,15 +1,8 @@
 package gen;
-
-import java.util.ArrayList;
-
 public class MyVisitor extends GrammarBaseVisitor<Thompson>{
-
     private Thompson t;
-    private final ArrayList<String> toAccept;
-
     public MyVisitor() {
         this.t = new Thompson();
-        this.toAccept = new ArrayList<>();
     }
 
     /**
@@ -22,11 +15,11 @@ public class MyVisitor extends GrammarBaseVisitor<Thompson>{
      */
     @Override
     public Thompson visitCarattere(GrammarParser.CarattereContext ctx) {
-
-        System.out.println("TESTO :"+ctx.FINAl().getText());
+        this.t= new Thompson();
         for (char c : ctx.FINAl().getText().toCharArray())  {
-            this.t.aggiungiConcatenazioneAllaFIne( Character.toString(c));
+           this.t =  this.t.aggiungiConcatenazioneAllaFIne( Character.toString(c));
         }
+
         return this.t;
     }
 
@@ -40,10 +33,18 @@ public class MyVisitor extends GrammarBaseVisitor<Thompson>{
      */
     @Override
     public Thompson visitEspressi(GrammarParser.EspressiContext ctx) {
-        System.out.println("Sto in Espressi");
-        boolean contieneUnione = this.visit(ctx.espressioneUnione())!= null;
-        if(!contieneUnione) this.t = this.visit(ctx.terminali());
-        else this.t = this.t.creaOr(this.visit(ctx.terminali()),this.visit(ctx.espressioneUnione()));
+        Thompson t1 = this.visit(ctx.terminali());
+        Thompson t2 = this.visit(ctx.espressioneUnione());
+
+        // Se t2 è null, crea un nuovo Thompson con t1 come iniziale e finale
+        if (t2 == null) {
+            this.t = new Thompson(t1.getStatoIniziale(), t1.getStatoFinale());
+        } else {
+            // Altrimenti, crea l'operazione di unione e assegna il risultato a this.t
+            this.t = this.t.creaOr(t1, t2);
+        }
+
+        // Restituisci this.t
         return this.t;
     }
 
@@ -120,9 +121,7 @@ public class MyVisitor extends GrammarBaseVisitor<Thompson>{
      */
     @Override
     public Thompson visitOperatore(GrammarParser.OperatoreContext ctx) {
-        System.out.println("OPERATORE");
-        boolean contieneCon = ctx.children.stream()
-                .anyMatch(e -> e instanceof GrammarParser.ConcatEpsilonContext);
+        boolean contieneCon = this.visit(ctx.esprConc())==null;
         if (contieneCon) this.t = this.visit(ctx.nuovaEsp());
         else this.t = this.t.concatenaDueAutomi(this.visit(ctx.nuovaEsp()),this.visit(ctx.esprConc()));
 
@@ -140,8 +139,29 @@ public class MyVisitor extends GrammarBaseVisitor<Thompson>{
      */
     @Override
     public Thompson visitProdCaratteri(GrammarParser.ProdCaratteriContext ctx) {
-        this.toAccept.add(ctx.FINAl().toString());
-        return super.visitProdCaratteri(ctx);
+        Thompson app = this.visit(ctx.listaCaratteri1());
+        if ( app!= null){
+            this.t =app;
+            this.t = this.t.aggiungiConcatenazioneAllaFIne(ctx.FINAl().getText());
+        }
+        else {
+            this.t = this.t.aggiungiConcatenazioneAllaFIne(ctx.FINAl().getText());
+        }
+        return this.t;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The default implementation returns the result of calling
+     * {@link #visitChildren} on {@code ctx}.</p>
+     *
+     * @param ctx
+     */
+    @Override
+    public Thompson visitVirgolaCaratteri(GrammarParser.VirgolaCaratteriContext ctx) {
+        this.t = this.visit(ctx.listaCaratteri());
+        return this.t;
     }
 
     /**
@@ -154,13 +174,13 @@ public class MyVisitor extends GrammarBaseVisitor<Thompson>{
      */
     @Override
     public Thompson visitList(GrammarParser.ListContext ctx) {
+        NFAState app = this.visit(ctx.listaCaratteri()).getStatoIniziale();
+        this.t = this.visit(ctx.espressione());
 
-        for (int i = ctx.children.size() - 1; i >= 0; i--) {
-            visit(ctx.children.get(i));
-        }
-        for (String s :this.toAccept){
-            if (this.t.accept(s)) System.out.println("OK");
-            else System.out.println("KO");
+        while (!app.isFinal()){
+            if(this.t.accept(app.transizioniUscenti().get(0).simboloAssociato()))  System.out.println("OKOKOKO");
+            else  System.out.println("KOKOKOKO");
+            app= app.transizioniUscenti().get(0).statoArrivo();
         }
         return this.t;
     }

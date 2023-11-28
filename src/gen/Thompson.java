@@ -1,9 +1,6 @@
 package gen;
-
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Thompson implements ThompsonNFA{
     private  NFAState start;
@@ -22,7 +19,6 @@ public class Thompson implements ThompsonNFA{
     public Thompson() {
         NFAStateCon nodoIn = new NFAStateCon("CON",false,true);
         NFAStateCon nodoFIn = new NFAStateCon("CON",true,false);
-
         this.start = nodoIn;
         this.finale = nodoFIn;
 
@@ -43,18 +39,19 @@ public class Thompson implements ThompsonNFA{
         return this.finale;
     }
 
-    public void aggiungiConcatenazioneAllaFIne(String val){
+    public Thompson aggiungiConcatenazioneAllaFIne(String val){
         NFAStateCon nuovoFinale = new NFAStateCon("con", true, false);
         NFATransition arco = new NFATransitonCon(this.finale, nuovoFinale, val);
         this.finale.addTransizione(arco);
-        if (this.getStatoIniziale().transizioniUscenti().size()==0){
-            this.setStart(this.finale);
+        if (this.getStatoIniziale().transizioniUscenti().size()==0) this.setStart(this.finale);
 
-        }
         this.setFinale(nuovoFinale);
+        return new Thompson(this.start,this.finale);
+
     }
 
     public Thompson creaOr(Thompson t1,Thompson t2){
+        System.out.println("OR");
         NFAStateCon nodoIn = new NFAStateCon("OR",false,true);
         NFAStateCon nodoFIn = new NFAStateCon("OR",true,false);
         NFATransition arco1 = new NFATransitonCon(nodoIn, t1.getStatoIniziale(), "epsilon");
@@ -99,45 +96,44 @@ public class Thompson implements ThompsonNFA{
         return new Thompson(nodoIn, nodoFIn);
     }
 
-    public boolean accept(String s) {
-        NFAState temp = this.start;
+    public boolean accept(String input) {
+        Set<NFAState> currentStates = epsilonClosure(Collections.singleton(start));
 
-        for (int i = 0; i < s.length(); i++) {
-            char currentChar = s.charAt(i);
-            boolean foundTransition = false;
+        for (char currentChar : input.toCharArray()) {
+            Set<NFAState> nextStates = new HashSet<>();
 
-            do {
-                // Cerca una transizione con il simbolo corrente
-                for (NFATransition transition : temp.transizioniUscenti()) {
-                    if (transition.simboloAssociato().equals(Character.toString(currentChar))) {
-                        temp = transition.statoArrivo();
-                        foundTransition = true;
-                        break;
-                    }
+            for (NFAState state : currentStates) {
+                Set<NFAState> transitions = state.transizioniUscenti().stream()
+                        .filter(e -> e.simboloAssociato().equals(String.valueOf(currentChar)))
+                        .map(NFATransition::statoArrivo)  // Mappa le transizioni ai loro stati di arrivo
+                        .collect(Collectors.toSet());
+                nextStates.addAll(epsilonClosure(transitions));
+            }
+            currentStates = nextStates;
+        }
+        // Verifica se almeno uno degli stati raggiunti è finale
+        return currentStates.stream().anyMatch(NFAState::isFinal);
+    }
+
+    private Set<NFAState> epsilonClosure(Set<NFAState> states) {
+        Set<NFAState> closure = new HashSet<>(states);
+        Queue<NFAState> queue = new LinkedList<>(states);
+
+        while (!queue.isEmpty()) {
+            NFAState state = queue.poll();
+            Set<NFAState> epsilonTransitions = state.transizioniUscenti().stream()
+                    .filter(e -> e.simboloAssociato().equals("epsilon"))
+                    .map(NFATransition::statoArrivo)  // Mappa le transizioni ai loro stati di arrivo
+                    .collect(Collectors.toSet());
+
+            for (NFAState epsilonState : epsilonTransitions) {
+                if (closure.add(epsilonState)) {
+                    queue.add(epsilonState);
                 }
-
-                // Se non c'è una transizione con il simbolo corrente, cerca una transizione epsilon
-                if (!foundTransition) {
-                    for (NFATransition epsilonTransition : temp.transizioniUscenti()) {
-                        System.out.println(epsilonTransition.simboloAssociato());
-                        if (epsilonTransition.simboloAssociato().equals("epsilon")) {
-
-                            temp = epsilonTransition.statoArrivo();
-                            foundTransition = true;
-                            break;
-                        }
-                    }
-                }
-            } while (foundTransition); // Continua finché ci sono transizioni epsilon
-
-            // Se non c'è né una transizione con il simbolo corrente né una transizione epsilon, restituisci false
-            if (!temp.isFinal()) {
-                return false;
             }
         }
 
-        // Verifica se lo stato finale è raggiunto
-        return temp.isFinal();
+        return closure;
     }
 
 
@@ -170,7 +166,6 @@ public class Thompson implements ThompsonNFA{
                 stringBuilder.append("\n");
             }
         }
-
         return stringBuilder.toString();
     }
 

@@ -1,5 +1,4 @@
 package gen;
-
 import java.util.ArrayList;
 
 public class NFAStateCon implements NFAState{

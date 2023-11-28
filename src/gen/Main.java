@@ -6,8 +6,8 @@ import org.antlr.v4.runtime.TokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 public class Main {
-    public static void main(String[] args) throws Exception {
-        String inputString = "a+b,a,b";
+    public static void main(String[] args) {
+        String inputString = "(ac+b)*,acacacacb,d,ffff";
         System.out.println("Stringa input: " + inputString);
 
         org.antlr.v4.runtime.CharStream input = CharStreams.fromString(inputString);
@@ -18,6 +18,7 @@ public class Main {
 
         MyVisitor eval = new MyVisitor();
         ThompsonNFA automa = eval.visit(tree);
-        System.out.println(automa);
+       // System.out.println(automa);
+        System.out.println(automa.accept("b"));
     }
 }
