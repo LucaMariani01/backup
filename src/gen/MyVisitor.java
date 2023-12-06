@@ -16,9 +16,14 @@ public class MyVisitor extends GrammarBaseVisitor<Thompson>{
     @Override
     public Thompson visitCarattere(GrammarParser.CarattereContext ctx) {
         this.t= new Thompson();
-        for (char c : ctx.FINAl().getText().toCharArray())  {
-           this.t =  this.t.aggiungiConcatenazioneAllaFIne( Character.toString(c));
-        }
+
+
+        if(!ctx.FINAl().getText().equals("epsilon")) {
+            for (char c : ctx.FINAl().getText().toCharArray()) {
+                if (c != '*') this.t = this.t.aggiungiConcatenazioneAllaFIne(Character.toString(c));
+                else this.t=this.t.createKleene(this.t);
+            }
+        }else this.t = this.t.aggiungiConcatenazioneAllaFIne(ctx.FINAl().getText());
 
         return this.t;
     }
@@ -178,8 +183,8 @@ public class MyVisitor extends GrammarBaseVisitor<Thompson>{
         this.t = this.visit(ctx.espressione());
 
         while (!app.isFinal()){
-            if(this.t.accept(app.transizioniUscenti().get(0).simboloAssociato()))  System.out.println("OKOKOKO");
-            else  System.out.println("KOKOKOKO");
+            if(this.t.accept(app.transizioniUscenti().get(0).simboloAssociato()))  System.out.println(app.transizioniUscenti().get(0).simboloAssociato()+": OK");
+            else  System.out.println(app.transizioniUscenti().get(0).simboloAssociato()+": KO");
             app= app.transizioniUscenti().get(0).statoArrivo();
         }
         return this.t;

@@ -51,7 +51,7 @@ public class Thompson implements ThompsonNFA{
     }
 
     public Thompson creaOr(Thompson t1,Thompson t2){
-        System.out.println("OR");
+
         NFAStateCon nodoIn = new NFAStateCon("OR",false,true);
         NFAStateCon nodoFIn = new NFAStateCon("OR",true,false);
         NFATransition arco1 = new NFATransitonCon(nodoIn, t1.getStatoIniziale(), "epsilon");
